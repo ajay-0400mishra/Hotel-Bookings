@@ -6,6 +6,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
@@ -21,16 +23,22 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.cluster import KMeans
 from mlxtend.frequent_patterns import apriori, association_rules
-import seaborn as sns
 
-# 2. (Optional) Add logo or banner
+# --- STYLES FOR CHARTS ---
+plt.style.use("seaborn-v0_8-colorblind")
+sns.set_palette("rocket")
+plt.rcParams.update({'font.size': 14, 'axes.titlesize':17, 'axes.labelsize':15})
+
+# 2. (Optional) Add logo/banner at the top
 # from PIL import Image
 # logo = Image.open("hotel_logo.png")
 # st.sidebar.image(logo, width=120)
 
 # 3. Streamlit config and title
-st.set_page_config(page_title="Hotel Pricing Insights Dashboard", layout="wide")
-st.title("AI‑Powered Hotel Pricing Insights Dashboard")
+st.set_page_config(page_title="Hotel Pricing Insights Dashboard", page_icon="🏨", layout="wide")
+
+st.markdown("<h1 style='color: #1e3a8a; font-family:Verdana;'>AI‑Powered Hotel Pricing Insights Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='color: #3e3e3e;'>Optimizing Advance Booking and Stay Length for the Best Rates</h4>", unsafe_allow_html=True)
 
 # 4. Load data
 @st.cache_data
@@ -45,10 +53,13 @@ kpi2 = df['Advance Booking Days'].map(lead_time_map).mean()
 kpi3 = df['ADR Budget'].map({
     '<2000':1500,'2000–4000':3000,'4000–7000':5500,'7000–10000':8500,'>10000':12000}).mean()
 
-l1, l2, l3 = st.columns(3)
-l1.metric("AI-Trust (%)", f"{kpi1:0.1f} %")
-l2.metric("Avg. Lead-Time (days)", f"{kpi2:0.1f}")
-l3.metric("Mean ADR (₹)", f"{kpi3:,.0f}")
+st.markdown("---")
+col1, col2, col3 = st.columns(3)
+col1.metric("AI-Trust (%)", f"{kpi1:0.1f} %")
+col2.metric("Avg. Lead-Time (days)", f"{kpi2:0.1f}")
+col3.metric("Mean ADR (₹)", f"{kpi3:,.0f}")
+
+st.markdown("---")
 
 # 6. Sidebar for filters and tab selection
 st.sidebar.header("GLOBAL FILTERS")
@@ -89,7 +100,7 @@ tabs = st.sidebar.radio(
 # 7. Helper functions
 def describe_plot(fig, caption):
     st.pyplot(fig)
-    st.markdown(f"**Insight:** {caption}")
+    st.markdown(f"<span style='color:#2951a3;font-size:15px'><b>Insight:</b> {caption}</span>", unsafe_allow_html=True)
 
 def encode_label(series):
     mapping = {"Yes": 1, "Maybe": 0, "No": 0}
@@ -100,7 +111,7 @@ def warn_empty():
 
 # --------- Data Visualization Tab ---------
 if tabs == "Data Visualization":
-    st.header("Key Descriptive Insights")
+    st.markdown("### <span style='color:#1e3a8a'>Key Descriptive Insights</span>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
 
     if df_filt.empty:
@@ -109,7 +120,7 @@ if tabs == "Data Visualization":
         fig1, ax1 = plt.subplots()
         sns.countplot(data=df_filt, x="Age Group", ax=ax1)
         plt.xticks(rotation=45)
-        describe_plot(fig1, "Age distribution shows majority of respondents are 25–44, ideal early‑career travelers.")
+        describe_plot(fig1, "Majority are 25–44, ideal early‑career travelers.")
 
         fig2, ax2 = plt.subplots()
         sns.countplot(data=df_filt, x="Preferred Hotel Type", hue="Trust AI", ax=ax2)
@@ -154,7 +165,7 @@ if tabs == "Data Visualization":
         if num_df.shape[1] > 1:
             corr = num_df.corr()
             if not corr.isnull().all().all():
-                sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", ax=ax_corr)
+                sns.heatmap(corr, annot=True, fmt=".2f", cmap="mako", ax=ax_corr)
                 describe_plot(fig_corr, "Correlation heat-map highlights which numeric factors move together.")
             else:
                 st.info("No valid numeric correlations could be calculated for the filtered data.")
@@ -164,17 +175,17 @@ if tabs == "Data Visualization":
         # Word Cloud (robust)
         text_blob = " ".join(df_filt['Additional Features'].dropna().astype(str))
         if text_blob.strip():
-            word_cloud = WordCloud(background_color='white', width=800, height=400).generate(text_blob)
+            word_cloud = WordCloud(background_color='#f0f6ff', width=800, height=400, colormap="viridis").generate(text_blob)
             fig_wc, ax_wc = plt.subplots(figsize=(8,4))
             ax_wc.imshow(word_cloud, interpolation='bilinear')
             ax_wc.axis('off')
-            describe_plot(fig_wc, "Word-cloud surfaces popular requested extras—loyalty rewards & AI chatbot dominate.")
+            describe_plot(fig_wc, "Popular requested extras—loyalty rewards & AI chatbot dominate.")
         else:
             st.info("No data for word cloud in the current filter selection.")
 
 # --------- Classification Tab ---------
 elif tabs == "Classification":
-    st.header("Predicting AI‑Trust Using Classification Models")
+    st.markdown("### <span style='color:#1e3a8a'>Predicting AI‑Trust Using Classification Models</span>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
     if df_filt.empty:
         warn_empty()
@@ -224,20 +235,28 @@ elif tabs == "Classification":
         st.write(pd.DataFrame(cm, index=["Actual 0","Actual 1"], columns=["Pred 0","Pred 1"]))
 
         # ROC Curve
+        import plotly.graph_objects as go
         st.subheader("ROC Curve")
-        fig_roc, ax_roc = plt.subplots()
+        fig_roc = go.Figure()
         for name, clf in fitted_models.items():
             if hasattr(clf, "predict_proba"):
                 y_score = clf.predict_proba(X_test)[:, 1]
             else:
                 y_score = clf.decision_function(X_test)
             fpr, tpr, _ = roc_curve(y_test, y_score)
-            ax_roc.plot(fpr, tpr, label=f"{name} (AUC={auc(fpr, tpr):.2f})")
-        ax_roc.plot([0, 1], [0, 1], linestyle="--")
-        ax_roc.set_xlabel("False Positive Rate")
-        ax_roc.set_ylabel("True Positive Rate")
-        ax_roc.legend()
-        st.pyplot(fig_roc)
+            fig_roc.add_trace(go.Scatter(
+                x=fpr, y=tpr, mode="lines", name=f"{name} (AUC={auc(fpr, tpr):.2f})"
+            ))
+        fig_roc.add_shape(type="line", x0=0, y0=0, x1=1, y1=1, line=dict(dash="dash", color="#a0a0a0"))
+        fig_roc.update_layout(
+            template="plotly_dark",
+            title="ROC Curve (All Models)",
+            xaxis_title="False Positive Rate",
+            yaxis_title="True Positive Rate",
+            font=dict(family="Verdana", size=15, color="#f7fafc"),
+            legend=dict(bgcolor="#23293d"),
+        )
+        st.plotly_chart(fig_roc, use_container_width=True)
 
         # Upload new data
         st.subheader("Predict on New Data")
@@ -252,7 +271,7 @@ elif tabs == "Classification":
 
 # --------- Clustering Tab ---------
 elif tabs == "Clustering":
-    st.header("Customer Segmentation with K‑Means")
+    st.markdown("### <span style='color:#1e3a8a'>Customer Segmentation with K‑Means</span>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
     if df_filt.empty:
         warn_empty()
@@ -266,7 +285,7 @@ elif tabs == "Clustering":
             kmeans_temp.fit(df_enc)
             inertia_list.append(kmeans_temp.inertia_)
         fig_elbow, ax_elbow = plt.subplots()
-        ax_elbow.plot(range(2, 11), inertia_list, marker="o")
+        ax_elbow.plot(range(2, 11), inertia_list, marker="o", color="#1e3a8a")
         ax_elbow.set_xlabel("k")
         ax_elbow.set_ylabel("Inertia")
         ax_elbow.set_title("Elbow Curve")
@@ -309,13 +328,17 @@ elif tabs == "Clustering":
                 fill='toself',
                 name=f"Cluster {int(row['Cluster'])}"
             ))
-        fig_radar.update_layout(showlegend=True)
+        fig_radar.update_layout(
+            showlegend=True,
+            template="plotly_dark",
+            font=dict(family="Verdana", size=14, color="#f7fafc")
+        )
         st.plotly_chart(fig_radar, use_container_width=True)
         st.download_button("Download Clustered Data", data=df_clustered.to_csv(index=False).encode(), file_name="clustered_data.csv")
 
 # --------- Association Rules Tab ---------
 elif tabs == "Association Rules":
-    st.header("Association Rule Mining")
+    st.markdown("### <span style='color:#1e3a8a'>Association Rule Mining</span>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
     if df_filt.empty:
         warn_empty()
@@ -347,7 +370,7 @@ elif tabs == "Association Rules":
 
 # --------- Regression Tab ---------
 elif tabs == "Regression":
-    st.header("ADR Budget Prediction")
+    st.markdown("### <span style='color:#1e3a8a'>ADR Budget Prediction</span>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
     if df_filt.empty:
         warn_empty()
@@ -395,12 +418,19 @@ elif tabs == "Regression":
 
             best_name = max(res_reg, key=lambda x: x["Test R2"])["Model"]
             st.subheader(f"Actual vs Predicted ADR Budget using {best_name}")
+            import plotly.graph_objects as go
             best_pipe = Pipeline(steps=[("prep", pre_r), ("model", models_r[best_name])])
             best_pipe.fit(X_train_r, y_train_r)
             preds = best_pipe.predict(X_test_r)
-            fig_scatter, ax_scatter = plt.subplots()
-            ax_scatter.scatter(y_test_r, preds)
-            ax_scatter.set_xlabel("Actual")
-            ax_scatter.set_ylabel("Predicted")
-            ax_scatter.set_title("Actual vs Predicted ADR")
-            st.pyplot(fig_scatter)
+            fig_scatter = go.Figure()
+            fig_scatter.add_trace(go.Scatter(
+                x=y_test_r, y=preds, mode="markers", marker=dict(color="#1e3a8a"), name="Predictions"
+            ))
+            fig_scatter.update_layout(
+                template="plotly_dark",
+                title="Actual vs Predicted ADR",
+                xaxis_title="Actual",
+                yaxis_title="Predicted",
+                font=dict(family="Verdana", size=15, color="#f7fafc")
+            )
+            st.plotly_chart(fig_scatter, use_container_width=True)
