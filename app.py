@@ -95,7 +95,6 @@ def describe_plot(fig, caption):
 def encode_label(series):
     mapping = {"Yes":1, "Maybe":0, "No":0}
     return series.map(mapping).fillna(0).astype(int)
-
 ))
 
 # --------- Data Visualization Tab ---------
