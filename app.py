@@ -52,25 +52,40 @@ l3.metric("Mean ADR (₹)", f"{kpi3:,.0f}")
 
 # 6. Sidebar for filters and tab selection
 st.sidebar.header("GLOBAL FILTERS")
-age_filter = st.sidebar.multiselect("Age Group", options=df['Age Group'].unique(),
-                                    default=df['Age Group'].unique())
-hotel_filter = st.sidebar.multiselect("Hotel Type", options=df['Preferred Hotel Type'].unique(),
-                                      default=df['Preferred Hotel Type'].unique())
-lead_filter = st.sidebar.slider("Lead-time (days)",
-                                min_value=0, max_value=20, value=(0,20))
+age_filter = st.sidebar.multiselect(
+    "Age Group", options=df['Age Group'].unique(),
+    default=df['Age Group'].unique()
+)
+hotel_filter = st.sidebar.multiselect(
+    "Hotel Type", options=df['Preferred Hotel Type'].unique(),
+    default=df['Preferred Hotel Type'].unique()
+)
+lead_filter = st.sidebar.slider(
+    "Lead-time (days)",
+    min_value=0, max_value=20, value=(0, 20)
+)
 df_filt = df.copy()
-df_filt = df_filt[df_filt['Age Group'].isin(age_filter) &
-                  df_filt['Preferred Hotel Type'].isin(hotel_filter)]
-df_filt = df_filt[df_filt['Advance Booking Days'].map(lead_time_map).between(*lead_filter)]
+df_filt = df_filt[
+    df_filt['Age Group'].isin(age_filter) &
+    df_filt['Preferred Hotel Type'].isin(hotel_filter)
+]
+df_filt = df_filt[
+    df_filt['Advance Booking Days'].map(lead_time_map).between(*lead_filter)
+]
 
 st.sidebar.header("Navigation")
-tabs = st.sidebar.radio("Go to", (
-    "Data Visualization", 
-    "Classification", 
-    "Clustering", 
-    "Association Rules", 
-    "Regression"
-))
+tabs = st.sidebar.radio(
+    "Go to", 
+    (
+        "Data Visualization", 
+        "Classification", 
+        "Clustering", 
+        "Association Rules", 
+        "Regression"
+    ),
+    key="main_tabs"  # <--- this prevents duplication errors
+)
+
 
 # 7. Helper functions (needed for plotting, etc.)
 def describe_plot(fig, caption):
