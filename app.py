@@ -1,4 +1,3 @@
-# 1. Imports (all needed libraries)
 import plotly.express as px
 from wordcloud import WordCloud
 from st_aggrid import AgGrid, GridOptionsBuilder
@@ -24,36 +23,34 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.cluster import KMeans
 from mlxtend.frequent_patterns import apriori, association_rules
 
-# --- STYLES FOR CHARTS ---
+# Set global styles for matplotlib/seaborn
 plt.style.use("seaborn-v0_8-colorblind")
 sns.set_palette("rocket")
-plt.rcParams.update({'font.size': 14, 'axes.titlesize':17, 'axes.labelsize':15})
+plt.rcParams.update({'font.size': 13, 'axes.titlesize':15, 'axes.labelsize':13})
 
-# 2. (Optional) Add logo/banner at the top
-# from PIL import Image
-# logo = Image.open("hotel_logo.png")
-# st.sidebar.image(logo, width=120)
-
-# 3. Streamlit config and title
+# STREAMLIT CONFIG & MAIN TITLE (no duplicate headings)
 st.set_page_config(page_title="Hotel Pricing Insights Dashboard", page_icon="🏨", layout="wide")
 
-st.markdown("<h1 style='color: #1e3a8a; font-family:Verdana;'>AI‑Powered Hotel Pricing Insights Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='color: #3e3e3e;'>Optimizing Advance Booking and Stay Length for the Best Rates</h4>", unsafe_allow_html=True)
+st.markdown(
+    "<h2 style='color: #1e3a8a; font-family:Verdana; margin-bottom:0.6em'>AI‑Powered Hotel Pricing Insights Dashboard</h2>"
+    "<div style='color:#3e3e3e; font-size:18px; margin-bottom:1em'>Optimize advance bookings & stay length for best rates.</div>",
+    unsafe_allow_html=True
+)
 
-# 4. Load data
+# DATA LOADING
 @st.cache_data
 def load_data():
     return pd.read_csv("synthetic_hotel_pricing_survey.csv")
 df = load_data()
 
-# 5. KPI calculation
+# KPI CALCULATIONS
 kpi1 = df['Trust AI'].eq('Yes').mean() * 100
 lead_time_map = {'Same day':0, '1–3 days':2, '4–7 days':5, '8–14 days':11, '15+ days':20}
 kpi2 = df['Advance Booking Days'].map(lead_time_map).mean()
 kpi3 = df['ADR Budget'].map({
     '<2000':1500,'2000–4000':3000,'4000–7000':5500,'7000–10000':8500,'>10000':12000}).mean()
 
-st.markdown("---")
+# ONE KPI SECTION — no custom header above!
 col1, col2, col3 = st.columns(3)
 col1.metric("AI-Trust (%)", f"{kpi1:0.1f} %")
 col2.metric("Avg. Lead-Time (days)", f"{kpi2:0.1f}")
@@ -61,7 +58,7 @@ col3.metric("Mean ADR (₹)", f"{kpi3:,.0f}")
 
 st.markdown("---")
 
-# 6. Sidebar for filters and tab selection
+# SIDEBAR FILTERS & NAVIGATION (only one nav)
 st.sidebar.header("GLOBAL FILTERS")
 age_filter = st.sidebar.multiselect(
     "Age Group", options=df['Age Group'].unique(),
@@ -72,8 +69,7 @@ hotel_filter = st.sidebar.multiselect(
     default=df['Preferred Hotel Type'].unique()
 )
 lead_filter = st.sidebar.slider(
-    "Lead-time (days)",
-    min_value=0, max_value=20, value=(0, 20)
+    "Lead-time (days)", min_value=0, max_value=20, value=(0, 20)
 )
 df_filt = df.copy()
 df_filt = df_filt[
@@ -97,10 +93,10 @@ tabs = st.sidebar.radio(
     key="main_tabs"
 )
 
-# 7. Helper functions
+# HELPER FUNCTIONS
 def describe_plot(fig, caption):
     st.pyplot(fig)
-    st.markdown(f"<span style='color:#2951a3;font-size:15px'><b>Insight:</b> {caption}</span>", unsafe_allow_html=True)
+    st.caption(f"**Insight:** {caption}")
 
 def encode_label(series):
     mapping = {"Yes": 1, "Maybe": 0, "No": 0}
@@ -109,9 +105,9 @@ def encode_label(series):
 def warn_empty():
     st.warning("No data to display for the current filters. Please adjust your filter selections.")
 
-# --------- Data Visualization Tab ---------
+# --------- DATA VISUALIZATION ---------
 if tabs == "Data Visualization":
-    st.markdown("### <span style='color:#1e3a8a'>Key Descriptive Insights</span>", unsafe_allow_html=True)
+    st.markdown("<b>Key Descriptive Insights</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
 
     if df_filt.empty:
@@ -183,9 +179,9 @@ if tabs == "Data Visualization":
         else:
             st.info("No data for word cloud in the current filter selection.")
 
-# --------- Classification Tab ---------
+# --------- CLASSIFICATION ---------
 elif tabs == "Classification":
-    st.markdown("### <span style='color:#1e3a8a'>Predicting AI‑Trust Using Classification Models</span>", unsafe_allow_html=True)
+    st.markdown("<b>Predicting AI‑Trust Using Classification Models</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
     if df_filt.empty:
         warn_empty()
@@ -253,7 +249,7 @@ elif tabs == "Classification":
             title="ROC Curve (All Models)",
             xaxis_title="False Positive Rate",
             yaxis_title="True Positive Rate",
-            font=dict(family="Verdana", size=15, color="#f7fafc"),
+            font=dict(family="Verdana", size=14, color="#f7fafc"),
             legend=dict(bgcolor="#23293d"),
         )
         st.plotly_chart(fig_roc, use_container_width=True)
@@ -269,9 +265,9 @@ elif tabs == "Classification":
             st.dataframe(new_df.head())
             st.download_button("Download Predictions", data=new_df.to_csv(index=False).encode(), file_name="trust_ai_predictions.csv")
 
-# --------- Clustering Tab ---------
+# --------- CLUSTERING ---------
 elif tabs == "Clustering":
-    st.markdown("### <span style='color:#1e3a8a'>Customer Segmentation with K‑Means</span>", unsafe_allow_html=True)
+    st.markdown("<b>Customer Segmentation with K‑Means</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
     if df_filt.empty:
         warn_empty()
@@ -336,9 +332,9 @@ elif tabs == "Clustering":
         st.plotly_chart(fig_radar, use_container_width=True)
         st.download_button("Download Clustered Data", data=df_clustered.to_csv(index=False).encode(), file_name="clustered_data.csv")
 
-# --------- Association Rules Tab ---------
+# --------- ASSOCIATION RULES ---------
 elif tabs == "Association Rules":
-    st.markdown("### <span style='color:#1e3a8a'>Association Rule Mining</span>", unsafe_allow_html=True)
+    st.markdown("<b>Association Rule Mining</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
     if df_filt.empty:
         warn_empty()
@@ -368,9 +364,9 @@ elif tabs == "Association Rules":
         else:
             st.info("Please select at least one column to perform association rule mining.")
 
-# --------- Regression Tab ---------
+# --------- REGRESSION ---------
 elif tabs == "Regression":
-    st.markdown("### <span style='color:#1e3a8a'>ADR Budget Prediction</span>", unsafe_allow_html=True)
+    st.markdown("<b>ADR Budget Prediction</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
     if df_filt.empty:
         warn_empty()
@@ -431,6 +427,6 @@ elif tabs == "Regression":
                 title="Actual vs Predicted ADR",
                 xaxis_title="Actual",
                 yaxis_title="Predicted",
-                font=dict(family="Verdana", size=15, color="#f7fafc")
+                font=dict(family="Verdana", size=14, color="#f7fafc")
             )
             st.plotly_chart(fig_scatter, use_container_width=True)
