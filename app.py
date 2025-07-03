@@ -95,14 +95,7 @@ def describe_plot(fig, caption):
 def encode_label(series):
     mapping = {"Yes":1, "Maybe":0, "No":0}
     return series.map(mapping).fillna(0).astype(int)
-# TAB SELECTOR — Place after sidebar!
-st.sidebar.header("Navigation")
-tabs = st.sidebar.radio("Go to", (
-    "Data Visualization", 
-    "Classification", 
-    "Clustering", 
-    "Association Rules", 
-    "Regression"
+
 ))
 
 # --------- Data Visualization Tab ---------
