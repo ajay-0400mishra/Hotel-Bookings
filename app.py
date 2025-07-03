@@ -255,7 +255,7 @@ fig_radar.update_layout(showlegend=True)
 st.plotly_chart(fig_radar, use_container_width=True)
 
 
-    st.download_button("Download Clustered Data", data=df_clustered.to_csv(index=False).encode(), file_name="clustered_data.csv")
+st.download_button("Download Clustered Data", data=df_clustered.to_csv(index=False).encode(), file_name="clustered_data.csv")
 
 # --------- Association Rules Tab ---------
 elif tabs == "Association Rules":
