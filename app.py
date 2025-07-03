@@ -1,4 +1,6 @@
-
+import plotly.express as px
+from wordcloud import WordCloud
+from st_aggrid import AgGrid, GridOptionsBuilder
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -28,10 +30,32 @@ st.title("AI‑Powered Hotel Pricing Insights Dashboard")
 def load_data():
     return pd.read_csv("synthetic_hotel_pricing_survey.csv")
 df = load_data()
+# ---- Global KPI cards ----
+kpi1 = df['Trust AI'].eq('Yes').mean() * 100
+lead_time_map = {'Same day':0, '1–3 days':2, '4–7 days':5, '8–14 days':11, '15+ days':20}
+kpi2 = df['Advance Booking Days'].map(lead_time_map).mean()
+kpi3 = df['ADR Budget'].map({
+    '<2000':1500,'2000–4000':3000,'4000–7000':5500,'7000–10000':8500,'>10000':12000}).mean()
+
+l1,l2,l3 = st.columns(3)
+l1.metric("AI-Trust (%)", f"{kpi1:0.1f} %")
+l2.metric("Avg. Lead-Time (days)", f"{kpi2:0.1f}")
+l3.metric("Mean ADR (₹)", f"{kpi3:,.0f}")
+
 
 # Sidebar
-st.sidebar.header("Navigation")
-tabs = st.sidebar.radio("Go to", ("Data Visualization", "Classification", "Clustering", "Association Rules", "Regression"))
+st.sidebar.header("GLOBAL FILTERS")
+age_filter = st.sidebar.multiselect("Age Group", options=df['Age Group'].unique(),
+                                    default=df['Age Group'].unique())
+hotel_filter = st.sidebar.multiselect("Hotel Type", options=df['Preferred Hotel Type'].unique(),
+                                      default=df['Preferred Hotel Type'].unique())
+lead_filter = st.sidebar.slider("Lead-time (days)",
+                                min_value=0, max_value=20, value=(0,20))
+# apply
+df_filt = df.copy()
+df_filt = df_filt[df_filt['Age Group'].isin(age_filter) &
+                  df_filt['Preferred Hotel Type'].isin(hotel_filter)]
+df_filt = df_filt[df_filt['Advance Booking Days'].map(lead_time_map).between(*lead_filter)]
 
 # --------- Helper Functions ---------
 def describe_plot(fig, caption):
@@ -86,6 +110,18 @@ if tabs == "Data Visualization":
     fig10, ax10 = plt.subplots()
     sns.countplot(data=df, x="Pay More for Sustainability", ax=ax10)
     describe_plot(fig10, "60% would pay premium for eco‑stays – integrate sustainability filter & pricing.")
+    
+    fig_corr, ax_corr = plt.subplots(figsize=(8,6))
+num_vars = df_filt.select_dtypes(exclude='object').corr()
+sns.heatmap(num_vars, annot=True, fmt=".2f", cmap="coolwarm", ax=ax_corr)
+describe_plot(fig_corr, "Correlation heat-map highlights which numeric factors move together.")
+
+text_blob = " ".join(df_filt['Additional Features'].dropna().astype(str))
+word_cloud = WordCloud(background_color='white', width=800, height=400).generate(text_blob)
+fig_wc, ax_wc = plt.subplots(figsize=(8,4))
+ax_wc.imshow(word_cloud, interpolation='bilinear'); ax_wc.axis('off')
+describe_plot(fig_wc, "Word-cloud surfaces popular requested extras—loyalty rewards & AI chatbot dominate.")
+
 
 # --------- Classification Tab ---------
 elif tabs == "Classification":
@@ -193,7 +229,31 @@ elif tabs == "Clustering":
         "ADR Budget": lambda x: x.mode().iloc[0],
         "Use Price Comparison": lambda x: x.mode().iloc[0],
     })
-    st.dataframe(persona)
+    gb = GridOptionsBuilder.from_dataframe(persona.reset_index())
+gb.configure_pagination(paginationAutoPageSize=True)
+AgGrid(persona.reset_index(), gridOptions=gb.build(), height=250, theme='alpine')
+
+import plotly.graph_objects as go
+radar_vars = ['AI_Trust_Pct','Mean_LeadTime','Mean_ADR']
+radar_df = df_clustered.groupby('Cluster').apply(
+    lambda g: pd.Series({
+        'AI_Trust_Pct':g['Trust AI'].eq('Yes').mean()*100,
+        'Mean_LeadTime':g['Advance Booking Days'].map(lead_time_map).mean(),
+        'Mean_ADR':g['ADR_Budget_Numeric'].mean()
+    })
+).reset_index()
+
+fig_radar = go.Figure()
+for _, row in radar_df.iterrows():
+    fig_radar.add_trace(go.Scatterpolar(
+        r=row[radar_vars].values,
+        theta=radar_vars,
+        fill='toself',
+        name=f"Cluster {int(row['Cluster'])}"
+    ))
+fig_radar.update_layout(showlegend=True)
+st.plotly_chart(fig_radar, use_container_width=True)
+
 
     st.download_button("Download Clustered Data", data=df_clustered.to_csv(index=False).encode(), file_name="clustered_data.csv")
 
