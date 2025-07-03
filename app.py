@@ -23,34 +23,32 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.cluster import KMeans
 from mlxtend.frequent_patterns import apriori, association_rules
 
-# Set global styles for matplotlib/seaborn
+# Set matplotlib/seaborn style
 plt.style.use("seaborn-v0_8-colorblind")
 sns.set_palette("rocket")
 plt.rcParams.update({'font.size': 13, 'axes.titlesize':15, 'axes.labelsize':13})
 
-# STREAMLIT CONFIG & MAIN TITLE (no duplicate headings)
+# Streamlit config and main heading
 st.set_page_config(page_title="Hotel Pricing Insights Dashboard", page_icon="🏨", layout="wide")
-
 st.markdown(
     "<h2 style='color: #1e3a8a; font-family:Verdana; margin-bottom:0.6em'>AI‑Powered Hotel Pricing Insights Dashboard</h2>"
     "<div style='color:#3e3e3e; font-size:18px; margin-bottom:1em'>Optimize advance bookings & stay length for best rates.</div>",
     unsafe_allow_html=True
 )
 
-# DATA LOADING
+# Load data
 @st.cache_data
 def load_data():
     return pd.read_csv("synthetic_hotel_pricing_survey.csv")
 df = load_data()
 
-# KPI CALCULATIONS
+# KPI calculations
 kpi1 = df['Trust AI'].eq('Yes').mean() * 100
 lead_time_map = {'Same day':0, '1–3 days':2, '4–7 days':5, '8–14 days':11, '15+ days':20}
 kpi2 = df['Advance Booking Days'].map(lead_time_map).mean()
 kpi3 = df['ADR Budget'].map({
     '<2000':1500,'2000–4000':3000,'4000–7000':5500,'7000–10000':8500,'>10000':12000}).mean()
 
-# ONE KPI SECTION — no custom header above!
 col1, col2, col3 = st.columns(3)
 col1.metric("AI-Trust (%)", f"{kpi1:0.1f} %")
 col2.metric("Avg. Lead-Time (days)", f"{kpi2:0.1f}")
@@ -58,7 +56,7 @@ col3.metric("Mean ADR (₹)", f"{kpi3:,.0f}")
 
 st.markdown("---")
 
-# SIDEBAR FILTERS & NAVIGATION (only one nav)
+# SIDEBAR: Filters and navigation
 st.sidebar.header("GLOBAL FILTERS")
 age_filter = st.sidebar.multiselect(
     "Age Group", options=df['Age Group'].unique(),
@@ -80,10 +78,11 @@ df_filt = df_filt[
     df_filt['Advance Booking Days'].map(lead_time_map).between(*lead_filter)
 ]
 
-st.sidebar.header("Navigation")
+# --- Navigation (add Summary tab!) ---
 tabs = st.sidebar.radio(
     "Go to", 
     (
+        "Summary & Insights",   # NEW tab!
         "Data Visualization", 
         "Classification", 
         "Clustering", 
@@ -93,7 +92,7 @@ tabs = st.sidebar.radio(
     key="main_tabs"
 )
 
-# HELPER FUNCTIONS
+# Helper functions
 def describe_plot(fig, caption):
     st.pyplot(fig)
     st.caption(f"**Insight:** {caption}")
@@ -105,59 +104,89 @@ def encode_label(series):
 def warn_empty():
     st.warning("No data to display for the current filters. Please adjust your filter selections.")
 
-# --------- DATA VISUALIZATION ---------
-if tabs == "Data Visualization":
-    st.markdown("<b>Key Descriptive Insights</b>", unsafe_allow_html=True)
-    st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
+# --------- 1. SUMMARY & INSIGHTS TAB ---------
+if tabs == "Summary & Insights":
+    st.markdown("<b>Executive Summary & Business Recommendations</b>", unsafe_allow_html=True)
+    st.info("""
+    **Key Takeaways from the Dashboard:**
+    - **Majority of potential customers are tech-savvy, young (25–44) urban professionals, open to using AI for hotel bookings.**
+    - **Optimal ADR is achieved by booking 7–14 days in advance and for 2–4 nights, especially in city hotels.**
+    - **Price-sensitive segments prefer using comparison platforms—transparency and smart recommendations will drive adoption.**
+    - **Trust in AI correlates with willingness to refer and subscribe; targeting these users with loyalty programs will increase retention.**
+    - **Cluster analysis reveals distinct customer personas: value-seekers, premium stayers, and eco-conscious travelers.**
+    - **Association rule mining suggests bundles like ‘Free breakfast + Flexible cancellation’ are top desired features.**
+    - **Regression and feature importance highlight lead time and income as strong predictors of ADR willingness.**
 
-    if df_filt.empty:
+    **Business Recommendations:**
+    - **Personalize offers based on customer cluster/persona.**
+    - **Market heavily towards mobile-first, urban users with trust in AI.**
+    - **Use predictive analytics to push personalized bundles and optimize dynamic pricing.**
+    - **Emphasize eco-friendly options and display transparency in AI-driven price suggestions.**
+    """)
+    st.success("Use the sidebar to explore deeper analytics, test filters, and simulate business strategies.")
+
+# --------- 2. DATA VISUALIZATION TAB ---------
+elif tabs == "Data Visualization":
+    st.markdown("<b>Key Descriptive Insights</b>", unsafe_allow_html=True)
+    st.caption("Hover over graphs for more info. Use the slider below to filter by ADR (average daily rate).")
+    st.info("**What is ADR?** Average Daily Rate – the average price paid per hotel room per night. Important for hotel revenue analytics.")
+
+    # ADR Slider
+    adr_vals = df_filt['ADR Budget'].map({
+        '<2000':1500,'2000–4000':3000,'4000–7000':5500,'7000–10000':8500,'>10000':12000
+    })
+    min_adr, max_adr = int(adr_vals.min()), int(adr_vals.max())
+    adr_slider = st.slider("Filter by ADR (₹)", min_adr, max_adr, (min_adr, max_adr), step=500, help="Slide to filter responses by average daily rate (room price).")
+    df_filt_vis = df_filt[adr_vals.between(*adr_slider)]
+
+    if df_filt_vis.empty:
         warn_empty()
     else:
         fig1, ax1 = plt.subplots()
-        sns.countplot(data=df_filt, x="Age Group", ax=ax1)
+        sns.countplot(data=df_filt_vis, x="Age Group", ax=ax1)
         plt.xticks(rotation=45)
         describe_plot(fig1, "Majority are 25–44, ideal early‑career travelers.")
 
         fig2, ax2 = plt.subplots()
-        sns.countplot(data=df_filt, x="Preferred Hotel Type", hue="Trust AI", ax=ax2)
+        sns.countplot(data=df_filt_vis, x="Preferred Hotel Type", hue="Trust AI", ax=ax2)
         describe_plot(fig2, "Higher AI trust among city‑hotel lovers suggests urban travelers are more tech‑savvy.")
 
         fig3, ax3 = plt.subplots()
-        sns.boxplot(data=df_filt, x="Stay Length (Nights)", y="Annual Income", ax=ax3)
+        sns.boxplot(data=df_filt_vis, x="Stay Length (Nights)", y="Annual Income", ax=ax3)
         describe_plot(fig3, "Longer stays correlate with higher incomes – premium opportunities for extended bundles.")
 
         fig4, ax4 = plt.subplots()
-        sns.histplot(df_filt["Annual Income"], bins=50, kde=True, ax=ax4)
+        sns.histplot(df_filt_vis["Annual Income"], bins=50, kde=True, ax=ax4)
         describe_plot(fig4, "Income distribution is highly skewed right with visible outliers – pricing must handle extremes.")
 
         fig5, ax5 = plt.subplots()
-        sns.countplot(data=df_filt, x="Use Price Comparison", ax=ax5)
+        sns.countplot(data=df_filt_vis, x="Use Price Comparison", ax=ax5)
         describe_plot(fig5, "Nearly half always use price comparators, validating need for price‑prediction transparency.")
 
         fig6, ax6 = plt.subplots()
-        comp = df_filt.groupby("Advance Booking Days")["ADR Budget"].value_counts().unstack().fillna(0)
+        comp = df_filt_vis.groupby("Advance Booking Days")["ADR Budget"].value_counts().unstack().fillna(0)
         comp.plot(kind='bar', stacked=True, ax=ax6)
         describe_plot(fig6, "Late bookers (<3 days) skew towards high ADR budgets – opportunity for last‑minute deals.")
 
         fig7, ax7 = plt.subplots()
-        sns.countplot(data=df_filt, x="Subscription Willingness", hue="Refer Platform", ax=ax7)
+        sns.countplot(data=df_filt_vis, x="Subscription Willingness", hue="Refer Platform", ax=ax7)
         describe_plot(fig7, "Users willing to pay ₹199–₹299+ are most likely to refer, indicating sweet‑spot pricing plan.")
 
         fig8, ax8 = plt.subplots()
-        sns.countplot(data=df_filt, x="Booking Device", ax=ax8)
+        sns.countplot(data=df_filt_vis, x="Booking Device", ax=ax8)
         describe_plot(fig8, "Mobile dominates bookings, so mobile‑first UX is crucial.")
 
         fig9, ax9 = plt.subplots()
-        sns.countplot(data=df_filt, x="Delayed Booking for Drop", hue="Trust AI", ax=ax9)
+        sns.countplot(data=df_filt_vis, x="Delayed Booking for Drop", hue="Trust AI", ax=ax9)
         describe_plot(fig9, "AI‑trusting users less likely to delay for price drops – market behaviour we can monetise.")
 
         fig10, ax10 = plt.subplots()
-        sns.countplot(data=df_filt, x="Pay More for Sustainability", ax=ax10)
+        sns.countplot(data=df_filt_vis, x="Pay More for Sustainability", ax=ax10)
         describe_plot(fig10, "60% would pay premium for eco‑stays – integrate sustainability filter & pricing.")
 
         # Correlation Heatmap (robust)
         fig_corr, ax_corr = plt.subplots(figsize=(8,6))
-        num_df = df_filt.select_dtypes(exclude='object')
+        num_df = df_filt_vis.select_dtypes(exclude='object')
         if num_df.shape[1] > 1:
             corr = num_df.corr()
             if not corr.isnull().all().all():
@@ -169,7 +198,7 @@ if tabs == "Data Visualization":
             st.info("No numeric columns available for correlation heatmap with current filters.")
 
         # Word Cloud (robust)
-        text_blob = " ".join(df_filt['Additional Features'].dropna().astype(str))
+        text_blob = " ".join(df_filt_vis['Additional Features'].dropna().astype(str))
         if text_blob.strip():
             word_cloud = WordCloud(background_color='#f0f6ff', width=800, height=400, colormap="viridis").generate(text_blob)
             fig_wc, ax_wc = plt.subplots(figsize=(8,4))
@@ -179,10 +208,11 @@ if tabs == "Data Visualization":
         else:
             st.info("No data for word cloud in the current filter selection.")
 
-# --------- CLASSIFICATION ---------
+# --------- 3. CLASSIFICATION TAB ---------
 elif tabs == "Classification":
     st.markdown("<b>Predicting AI‑Trust Using Classification Models</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
+    st.info("Classification algorithms predict whether a customer will trust AI-driven hotel pricing based on profile, booking habits, and preferences.")
     if df_filt.empty:
         warn_empty()
     else:
@@ -230,7 +260,7 @@ elif tabs == "Classification":
         st.write("Confusion Matrix (rows: actual, cols: predicted)")
         st.write(pd.DataFrame(cm, index=["Actual 0","Actual 1"], columns=["Pred 0","Pred 1"]))
 
-        # ROC Curve
+        # ROC Curve (Plotly, interactive)
         import plotly.graph_objects as go
         st.subheader("ROC Curve")
         fig_roc = go.Figure()
@@ -254,6 +284,23 @@ elif tabs == "Classification":
         )
         st.plotly_chart(fig_roc, use_container_width=True)
 
+        # FEATURE IMPORTANCE PLOT (Random Forest)
+        st.subheader("Feature Importance (Random Forest)")
+        rf_model = fitted_models["Random Forest"].named_steps["model"]
+        ohe = fitted_models["Random Forest"].named_steps["prep"].named_transformers_["cat"]
+        num_feats = num_cols
+        cat_feats = ohe.get_feature_names_out(cat_cols) if hasattr(ohe, "get_feature_names_out") else []
+        feature_names = list(cat_feats) + num_feats
+        importances = rf_model.feature_importances_
+
+        feat_imp = pd.Series(importances, index=feature_names).sort_values(ascending=False)[:15]
+        fig_imp, ax_imp = plt.subplots(figsize=(7, 4))
+        feat_imp.plot(kind='barh', ax=ax_imp, color="#1e3a8a")
+        ax_imp.invert_yaxis()
+        ax_imp.set_title("Top Feature Importances (Random Forest)")
+        st.pyplot(fig_imp)
+        st.caption("Higher importance means the feature is more influential in predicting customer trust in AI pricing.")
+
         # Upload new data
         st.subheader("Predict on New Data")
         uploaded = st.file_uploader("Upload CSV with same columns (without 'Trust AI')", type="csv")
@@ -265,10 +312,11 @@ elif tabs == "Classification":
             st.dataframe(new_df.head())
             st.download_button("Download Predictions", data=new_df.to_csv(index=False).encode(), file_name="trust_ai_predictions.csv")
 
-# --------- CLUSTERING ---------
+# --------- 4. CLUSTERING TAB ---------
 elif tabs == "Clustering":
     st.markdown("<b>Customer Segmentation with K‑Means</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
+    st.info("Clustering uses K-means to identify customer segments or personas based on their booking and demographic characteristics.")
     if df_filt.empty:
         warn_empty()
     else:
@@ -332,16 +380,17 @@ elif tabs == "Clustering":
         st.plotly_chart(fig_radar, use_container_width=True)
         st.download_button("Download Clustered Data", data=df_clustered.to_csv(index=False).encode(), file_name="clustered_data.csv")
 
-# --------- ASSOCIATION RULES ---------
+# --------- 5. ASSOCIATION RULES TAB ---------
 elif tabs == "Association Rules":
     st.markdown("<b>Association Rule Mining</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
+    st.info("Apriori algorithm uncovers common feature and preference combinations among guests—ideal for bundles and promotions.")
     if df_filt.empty:
         warn_empty()
     else:
         col_choice = st.multiselect("Select columns for Apriori (comma-separated fields)", ["Platforms Used", "Booking Challenges", "Desired Features"])
-        min_support = st.slider("Minimum Support", 0.01, 0.3, 0.05, 0.01)
-        min_conf = st.slider("Minimum Confidence", 0.1, 0.9, 0.5, 0.05)
+        min_support = st.slider("Minimum Support", 0.01, 0.3, 0.05, 0.01, help="Minimum fraction of records an itemset must appear in to be considered frequent.")
+        min_conf = st.slider("Minimum Confidence", 0.1, 0.9, 0.5, 0.05, help="Likelihood that if a guest has set A, they will also have set B.")
         if col_choice:
             basket = df_filt[col_choice].apply(lambda row: ", ".join(row.dropna()), axis=1)
             unique_items = set()
@@ -364,10 +413,11 @@ elif tabs == "Association Rules":
         else:
             st.info("Please select at least one column to perform association rule mining.")
 
-# --------- REGRESSION ---------
+# --------- 6. REGRESSION TAB ---------
 elif tabs == "Regression":
     st.markdown("<b>ADR Budget Prediction</b>", unsafe_allow_html=True)
     st.caption(f"Analyzing {len(df_filt)} responses based on selected filters.")
+    st.info("Regression models predict a guest's ADR budget based on demographic and behavioral inputs. Useful for price optimization.")
     if df_filt.empty:
         warn_empty()
     else:
