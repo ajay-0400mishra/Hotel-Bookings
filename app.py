@@ -24,9 +24,9 @@ from mlxtend.frequent_patterns import apriori, association_rules
 import seaborn as sns
 
 # 2. (Optional) Add logo or banner
-#from PIL import Image
-#logo = Image.open("hotel_logo.png")
-#st.image(logo, width=120)
+# from PIL import Image
+# logo = Image.open("hotel_logo.png")
+# st.sidebar.image(logo, width=120)
 
 # 3. Streamlit config and title
 st.set_page_config(page_title="Hotel Pricing Insights Dashboard", layout="wide")
@@ -45,7 +45,7 @@ kpi2 = df['Advance Booking Days'].map(lead_time_map).mean()
 kpi3 = df['ADR Budget'].map({
     '<2000':1500,'2000–4000':3000,'4000–7000':5500,'7000–10000':8500,'>10000':12000}).mean()
 
-l1,l2,l3 = st.columns(3)
+l1, l2, l3 = st.columns(3)
 l1.metric("AI-Trust (%)", f"{kpi1:0.1f} %")
 l2.metric("Avg. Lead-Time (days)", f"{kpi2:0.1f}")
 l3.metric("Mean ADR (₹)", f"{kpi3:,.0f}")
@@ -83,9 +83,8 @@ tabs = st.sidebar.radio(
         "Association Rules", 
         "Regression"
     ),
-    key="main_tabs"  # <--- this prevents duplication errors
+    key="main_tabs"  # Prevents duplication errors
 )
-
 
 # 7. Helper functions (needed for plotting, etc.)
 def describe_plot(fig, caption):
@@ -93,9 +92,8 @@ def describe_plot(fig, caption):
     st.markdown(f"**Insight:** {caption}")
 
 def encode_label(series):
-    mapping = {"Yes":1, "Maybe":0, "No":0}
+    mapping = {"Yes": 1, "Maybe": 0, "No": 0}
     return series.map(mapping).fillna(0).astype(int)
-)
 
 # --------- Data Visualization Tab ---------
 if tabs == "Data Visualization":
@@ -141,7 +139,7 @@ if tabs == "Data Visualization":
     fig10, ax10 = plt.subplots()
     sns.countplot(data=df_filt, x="Pay More for Sustainability", ax=ax10)
     describe_plot(fig10, "60% would pay premium for eco‑stays – integrate sustainability filter & pricing.")
-    
+
     # Correlation Heatmap
     fig_corr, ax_corr = plt.subplots(figsize=(8,6))
     num_vars = df_filt.select_dtypes(exclude='object').corr()
@@ -153,7 +151,8 @@ if tabs == "Data Visualization":
     if text_blob.strip():
         word_cloud = WordCloud(background_color='white', width=800, height=400).generate(text_blob)
         fig_wc, ax_wc = plt.subplots(figsize=(8,4))
-        ax_wc.imshow(word_cloud, interpolation='bilinear'); ax_wc.axis('off')
+        ax_wc.imshow(word_cloud, interpolation='bilinear')
+        ax_wc.axis('off')
         describe_plot(fig_wc, "Word-cloud surfaces popular requested extras—loyalty rewards & AI chatbot dominate.")
 
 # --------- Classification Tab ---------
@@ -208,13 +207,15 @@ elif tabs == "Classification":
     fig_roc, ax_roc = plt.subplots()
     for name, clf in fitted_models.items():
         if hasattr(clf, "predict_proba"):
-            y_score = clf.predict_proba(X_test)[:,1]
+            y_score = clf.predict_proba(X_test)[:, 1]
         else:
             y_score = clf.decision_function(X_test)
         fpr, tpr, _ = roc_curve(y_test, y_score)
-        ax_roc.plot(fpr, tpr, label=f"{name} (AUC={auc(fpr,tpr):.2f})")
-    ax_roc.plot([0,1], [0,1], linestyle="--")
-    ax_roc.set_xlabel("False Positive Rate"); ax_roc.set_ylabel("True Positive Rate"); ax_roc.legend()
+        ax_roc.plot(fpr, tpr, label=f"{name} (AUC={auc(fpr, tpr):.2f})")
+    ax_roc.plot([0, 1], [0, 1], linestyle="--")
+    ax_roc.set_xlabel("False Positive Rate")
+    ax_roc.set_ylabel("True Positive Rate")
+    ax_roc.legend()
     st.pyplot(fig_roc)
 
     # Upload new data
@@ -241,7 +242,9 @@ elif tabs == "Clustering":
         inertia_list.append(kmeans_temp.inertia_)
     fig_elbow, ax_elbow = plt.subplots()
     ax_elbow.plot(range(2, 11), inertia_list, marker="o")
-    ax_elbow.set_xlabel("k"); ax_elbow.set_ylabel("Inertia"); ax_elbow.set_title("Elbow Curve")
+    ax_elbow.set_xlabel("k")
+    ax_elbow.set_ylabel("Inertia")
+    ax_elbow.set_title("Elbow Curve")
     st.pyplot(fig_elbow)
 
     kmeans = KMeans(n_clusters=max_k, random_state=42, n_init="auto")
@@ -265,13 +268,13 @@ elif tabs == "Clustering":
     import plotly.graph_objects as go
     # Add cluster-level metrics for radar
     df_clustered["ADR_Budget_Numeric"] = df_clustered["ADR Budget"].map({
-        '<2000':1500,'2000–4000':3000,'4000–7000':5500,'7000–10000':8500,'>10000':12000})
-    radar_vars = ['AI_Trust_Pct','Mean_LeadTime','Mean_ADR']
+        '<2000': 1500, '2000–4000': 3000, '4000–7000': 5500, '7000–10000': 8500, '>10000': 12000})
+    radar_vars = ['AI_Trust_Pct', 'Mean_LeadTime', 'Mean_ADR']
     radar_df = df_clustered.groupby('Cluster').apply(
         lambda g: pd.Series({
-            'AI_Trust_Pct':g['Trust AI'].eq('Yes').mean()*100,
-            'Mean_LeadTime':g['Advance Booking Days'].map(lead_time_map).mean(),
-            'Mean_ADR':g['ADR_Budget_Numeric'].mean()
+            'AI_Trust_Pct': g['Trust AI'].eq('Yes').mean() * 100,
+            'Mean_LeadTime': g['Advance Booking Days'].map(lead_time_map).mean(),
+            'Mean_ADR': g['ADR_Budget_Numeric'].mean()
         })
     ).reset_index()
     fig_radar = go.Figure()
@@ -351,6 +354,7 @@ elif tabs == "Regression":
     preds = best_pipe.predict(X_test_r)
     fig_scatter, ax_scatter = plt.subplots()
     ax_scatter.scatter(y_test_r, preds)
-    ax_scatter.set_xlabel("Actual"); ax_scatter.set_ylabel("Predicted"); ax_scatter.set_title("Actual vs Predicted ADR")
+    ax_scatter.set_xlabel("Actual")
+    ax_scatter.set_ylabel("Predicted")
+    ax_scatter.set_title("Actual vs Predicted ADR")
     st.pyplot(fig_scatter)
-
