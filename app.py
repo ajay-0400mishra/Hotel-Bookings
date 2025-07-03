@@ -112,15 +112,15 @@ if tabs == "Data Visualization":
     describe_plot(fig10, "60% would pay premium for eco‑stays – integrate sustainability filter & pricing.")
     
     fig_corr, ax_corr = plt.subplots(figsize=(8,6))
-num_vars = df_filt.select_dtypes(exclude='object').corr()
-sns.heatmap(num_vars, annot=True, fmt=".2f", cmap="coolwarm", ax=ax_corr)
-describe_plot(fig_corr, "Correlation heat-map highlights which numeric factors move together.")
+        num_vars = df_filt.select_dtypes(exclude='object').corr()
+        sns.heatmap(num_vars, annot=True, fmt=".2f", cmap="coolwarm", ax=ax_corr)
+        describe_plot(fig_corr, "Correlation heat-map highlights which numeric factors move together.")
 
-text_blob = " ".join(df_filt['Additional Features'].dropna().astype(str))
-word_cloud = WordCloud(background_color='white', width=800, height=400).generate(text_blob)
-fig_wc, ax_wc = plt.subplots(figsize=(8,4))
-ax_wc.imshow(word_cloud, interpolation='bilinear'); ax_wc.axis('off')
-describe_plot(fig_wc, "Word-cloud surfaces popular requested extras—loyalty rewards & AI chatbot dominate.")
+        text_blob = " ".join(df_filt['Additional Features'].dropna().astype(str))
+        word_cloud = WordCloud(background_color='white', width=800, height=400).generate(text_blob)
+        fig_wc, ax_wc = plt.subplots(figsize=(8,4))
+        ax_wc.imshow(word_cloud, interpolation='bilinear'); ax_wc.axis('off')
+        describe_plot(fig_wc, "Word-cloud surfaces popular requested extras—loyalty rewards & AI chatbot dominate.")
 
 
 # --------- Classification Tab ---------
