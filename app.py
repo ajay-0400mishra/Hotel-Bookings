@@ -329,10 +329,6 @@ elif tabs == "Classification":
 
         st.dataframe(pd.DataFrame(results).set_index("Model").round(3))
         st.markdown("""
-        - Random Forest and GBRT models deliver the highest accuracy (82%+), making them ideal for production use.
-        - Precision and recall scores indicate strong performance in identifying both AI-trusting and skeptical guests.
-        - KNN slightly underperforms due to non-linear data structure.
-        - High F1 scores mean consistent predictions across guest types.
         """)
 
         algo_choice = st.selectbox("Select algorithm to view Confusion Matrix", list(models.keys()))
@@ -340,9 +336,6 @@ elif tabs == "Classification":
         st.write("Confusion Matrix (rows: actual, cols: predicted)")
         st.write(pd.DataFrame(cm, index=["Actual 0","Actual 1"], columns=["Pred 0","Pred 1"]))
         st.markdown("""
-        - True positives (AI-trusting predicted as trusting) are significantly higher than false positives.
-        - The model tends to be slightly conservative, minimizing the risk of targeting uninterested guests.
-        - Fine-tuning can further improve performance on the “Maybe” segment.
         """)
 
         # ROC Curve (Plotly, interactive)
